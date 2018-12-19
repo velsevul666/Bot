@@ -1,43 +1,86 @@
-import BotHandler
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+import config
+import webscrapping
+import birthdayscrap
+import json
+token = config.token
+REQUEST_KWARGS = {
+    'proxy_url': 'http://195.191.183.169:47238/'
+}
 
-token='686836181:AAFQ1pa0gN1r5Buxv4WGi2PLUm5calDsZQg'
-greet_bot = BotHandler(token)
-greetings = ('здравствуй', 'привет', 'ку', 'здорово', 'хай')
-now = datetime.datetime.now()
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import logging
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+
+# Define a few command handlers. These usually take the two arguments bot and
+# update. Error handlers also receive the raised TelegramError object in error.
+def start(bot, update):
+    """Send a message when the command /start is issued."""
+    update.message.reply_text('Здравствуйте! Чтобы узнать, какие сегодня праздники наберите /holidays, чтобы узнать, у кого сегодня день рождения - /birthday')
+
+
+
+def help(bot, update):
+    """Send a message when the command /help is issued."""
+    update.message.reply_text('Доступны следующие команды: '
+                              '/holidays -  узнать праздники сегодня,'
+                              '/birthday - узнать, кто родился в этот день,'
+                              '/help - посмотреть список команд')
+
+def holidays(bot, update):
+    text = webscrapping.results
+    text = json.dumps(text,ensure_ascii=False,indent=0)
+    update.message.reply_text(text)
+
+def birthday(bot, update):
+    text = birthdayscrap.results
+    text = json.dumps(text, ensure_ascii=False,indent=0)
+    print(text)
+    update.message.reply_text(text)
+
+def echo(bot, update):
+    update.message.reply_text((update.message.text))
+
+def error(bot, update, error):
+    """Log Errors caused by Updates."""
+    logger.warning('Update "%s" caused error "%s"', update, error)
 
 
 def main():
-    new_offset = None
-    today = now.day
-    hour = now.hour
+    """Start the bot."""
+    # Create the EventHandler and pass it your bot's token.
+    updater = Updater(token)
 
-    while True:
-        greet_bot.get_updates(new_offset)
+    # Get the dispatcher to register handlers
+    dp = updater.dispatcher
 
-        last_update = greet_bot.get_last_update()
+    # on different commands - answer in Telegram
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("holidays", holidays))
+    dp.add_handler(CommandHandler("birthday", birthday))
 
-        last_update_id = last_update['update_id']
-        last_chat_text = last_update['message']['text']
-        last_chat_id = last_update['message']['chat']['id']
-        last_chat_name = last_update['message']['chat']['first_name']
+    # on noncommand i.e message - echo the message on Telegram
+    dp.add_handler(MessageHandler(Filters.text, echo))
 
-        if last_chat_text.lower() in greetings and today == now.day and 6 <= hour < 12:
-            greet_bot.send_message(last_chat_id, 'Доброе утро, {}'.format(last_chat_name))
-            today += 1
+    # log all errors
+    dp.add_error_handler(error)
 
-        elif last_chat_text.lower() in greetings and today == now.day and 12 <= hour < 17:
-            greet_bot.send_message(last_chat_id, 'Добрый день, {}'.format(last_chat_name))
-            today += 1
+    # Start the Bot
+    updater.start_polling()
 
-        elif last_chat_text.lower() in greetings and today == now.day and 17 <= hour < 23:
-            greet_bot.send_message(last_chat_id, 'Добрый вечер, {}'.format(last_chat_name))
-            today += 1
-
-        new_offset = last_update_id + 1
+    # Run the bot until you press Ctrl-C or the process receives SIGINT,
+    # SIGTERM or SIGABRT. This should be used most of the time, since
+    # start_polling() is non-blocking and will stop the bot gracefully.
+    updater.idle()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        exit()
+    main()
