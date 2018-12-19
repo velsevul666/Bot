@@ -1,13 +1,8 @@
 
 import requests
 from bs4 import BeautifulSoup
-import os
 import pandas as pd
-import time
-import re
-import seaborn
-from lxml import html
-import matplotlib
+
 
 
 from pylab import rcParams
